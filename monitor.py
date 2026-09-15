@@ -13,6 +13,7 @@ if not cap.isOpened():
     exit()
 
 last_alert = 0
+show_alert_until = 0
 frame_count = 0
 
 while True:
@@ -25,6 +26,9 @@ while True:
 
     try:
         if frame_count % 3 != 0:
+            if time.time() < show_alert_until:
+                cv2.putText(frame, "LARGA O CELULAR!", (30, 240),
+                            cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4, cv2.LINE_AA)
             cv2.imshow("monitor", frame)
             if cv2.waitKey(1) == ord('q'):
                 break
@@ -37,9 +41,14 @@ while True:
                 cls = model.names[int(box.cls)]
                 conf = float(box.conf)
                 if cls == "cell phone":
+                    show_alert_until = time.time() + 3
                     if time.time() - last_alert > 30:
                         notification.notify(title="Foco!", message="Larga o celular 👀")
                         last_alert = time.time()
+
+        if time.time() < show_alert_until:
+            cv2.putText(frame, "LARGA O CELULAR!", (30, 240),
+                        cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4, cv2.LINE_AA)
 
         cv2.imshow("monitor", frame)
         if cv2.waitKey(1) == ord('q'):
