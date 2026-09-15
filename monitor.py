@@ -20,6 +20,7 @@ last_alert = 0
 show_alert_until = 0
 frame_count = 0
 force_replay = False
+phone_boxes = []
 
 button_top_left = (500, 10)
 button_bottom_right = (630, 50)
@@ -42,6 +43,13 @@ def draw_button(frame):
     cv2.putText(frame, "STOP", (button_top_left[0] + 10, button_top_left[1] + 28),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
 
+def draw_phone_boxes(frame, boxes):
+    for (x1, y1, x2, y2, conf) in boxes:
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        label = f"cell phone {conf:.2f}"
+        cv2.putText(frame, label, (x1, max(y1 - 10, 20)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
+
 while True:
     ret, frame = cap.read()
 
@@ -55,6 +63,7 @@ while True:
             if time.time() < show_alert_until:
                 cv2.putText(frame, "LARGA O CELULAR!", (30, 240),
                             cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4, cv2.LINE_AA)
+                draw_phone_boxes(frame, phone_boxes)
             draw_button(frame)
             cv2.imshow("monitor", frame)
             if cv2.waitKey(1) == ord('q'):
@@ -62,12 +71,16 @@ while True:
             continue
 
         results = model(frame, verbose=False, conf=0.3, imgsz=416)
+        phone_boxes = []
 
         for r in results:
             for box in r.boxes:
                 cls = model.names[int(box.cls)]
                 conf = float(box.conf)
                 if cls == "cell phone":
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    phone_boxes.append((x1, y1, x2, y2, conf))
+
                     show_alert_until = time.time() + 3
                     if time.time() - last_alert > 30 or force_replay:
                         notification.notify(title="Foco!", message="Larga o celular 👀")
@@ -78,6 +91,7 @@ while True:
         if time.time() < show_alert_until:
             cv2.putText(frame, "LARGA O CELULAR!", (30, 240),
                         cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4, cv2.LINE_AA)
+            draw_phone_boxes(frame, phone_boxes)
 
         draw_button(frame)
         cv2.imshow("monitor", frame)
