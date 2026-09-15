@@ -13,12 +13,31 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 if not cap.isOpened():
-    print("ERROR: Could not open camera. Check Windows camera privacy settings.")
+    print("ERROR: Could not open camera.")
     exit()
 
 last_alert = 0
 show_alert_until = 0
 frame_count = 0
+
+button_top_left = (500, 10)
+button_bottom_right = (630, 50)
+
+def mouse_click(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        bx1, by1 = button_top_left
+        bx2, by2 = button_bottom_right
+        if bx1 <= x <= bx2 and by1 <= y <= by2:
+            pygame.mixer.stop()
+            print("Music stopped by button.")
+
+cv2.namedWindow("monitor")
+cv2.setMouseCallback("monitor", mouse_click)
+
+def draw_button(frame):
+    cv2.rectangle(frame, button_top_left, button_bottom_right, (50, 50, 50), -1)
+    cv2.putText(frame, "STOP", (button_top_left[0] + 10, button_top_left[1] + 28),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
 
 while True:
     ret, frame = cap.read()
@@ -33,6 +52,7 @@ while True:
             if time.time() < show_alert_until:
                 cv2.putText(frame, "LARGA O CELULAR!", (30, 240),
                             cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4, cv2.LINE_AA)
+            draw_button(frame)
             cv2.imshow("monitor", frame)
             if cv2.waitKey(1) == ord('q'):
                 break
@@ -55,6 +75,7 @@ while True:
             cv2.putText(frame, "LARGA O CELULAR!", (30, 240),
                         cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4, cv2.LINE_AA)
 
+        draw_button(frame)
         cv2.imshow("monitor", frame)
         if cv2.waitKey(1) == ord('q'):
             break
