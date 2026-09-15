@@ -1,7 +1,11 @@
 import cv2
 from ultralytics import YOLO
 from plyer import notification
+import pygame
 import time
+
+pygame.mixer.init()
+alert_sound = pygame.mixer.Sound("alert.ogg")
 
 model = YOLO('yolov8n.pt')
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
@@ -44,6 +48,7 @@ while True:
                     show_alert_until = time.time() + 3
                     if time.time() - last_alert > 30:
                         notification.notify(title="Foco!", message="Larga o celular 👀")
+                        alert_sound.play()
                         last_alert = time.time()
 
         if time.time() < show_alert_until:
