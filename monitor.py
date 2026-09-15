@@ -19,16 +19,19 @@ if not cap.isOpened():
 last_alert = 0
 show_alert_until = 0
 frame_count = 0
+force_replay = False
 
 button_top_left = (500, 10)
 button_bottom_right = (630, 50)
 
 def mouse_click(event, x, y, flags, param):
+    global force_replay
     if event == cv2.EVENT_LBUTTONDOWN:
         bx1, by1 = button_top_left
         bx2, by2 = button_bottom_right
         if bx1 <= x <= bx2 and by1 <= y <= by2:
             pygame.mixer.stop()
+            force_replay = True
             print("Music stopped by button.")
 
 cv2.namedWindow("monitor")
@@ -66,10 +69,11 @@ while True:
                 conf = float(box.conf)
                 if cls == "cell phone":
                     show_alert_until = time.time() + 3
-                    if time.time() - last_alert > 30:
+                    if time.time() - last_alert > 30 or force_replay:
                         notification.notify(title="Foco!", message="Larga o celular 👀")
                         alert_sound.play()
                         last_alert = time.time()
+                        force_replay = False
 
         if time.time() < show_alert_until:
             cv2.putText(frame, "LARGA O CELULAR!", (30, 240),
