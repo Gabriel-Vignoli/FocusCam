@@ -7,7 +7,7 @@ import time
 pygame.mixer.init()
 alert_sound = pygame.mixer.Sound("alert.ogg")
 
-model = YOLO('yolov8n.pt')
+model = YOLO('yolov8s.pt')
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -21,6 +21,7 @@ show_alert_until = 0
 frame_count = 0
 force_replay = False
 phone_boxes = []
+other_boxes = []  # NEW: boxes for person/chair, outline only, no alert
 
 button_top_left = (500, 10)
 button_bottom_right = (630, 50)
@@ -50,6 +51,13 @@ def draw_phone_boxes(frame, boxes):
         cv2.putText(frame, label, (x1, max(y1 - 10, 20)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
 
+def draw_other_boxes(frame, boxes):  # NEW: green outline only, no text alert triggered
+    for (x1, y1, x2, y2, cls, conf) in boxes:
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        label = f"{cls} {conf:.2f}"
+        cv2.putText(frame, label, (x1, max(y1 - 10, 20)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
+
 while True:
     ret, frame = cap.read()
 
@@ -64,21 +72,26 @@ while True:
                 cv2.putText(frame, "LARGA O CELULAR!", (30, 240),
                             cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4, cv2.LINE_AA)
                 draw_phone_boxes(frame, phone_boxes)
+            draw_other_boxes(frame, other_boxes)  # NEW
             draw_button(frame)
             cv2.imshow("monitor", frame)
             if cv2.waitKey(1) == ord('q'):
                 break
             continue
 
-        results = model(frame, verbose=False, conf=0.3, imgsz=416)
+        results = model(frame, verbose=False, conf=0.65, imgsz=416)  # raised threshold to 0.65
         phone_boxes = []
+        other_boxes = []  # NEW
 
         for r in results:
             for box in r.boxes:
                 cls = model.names[int(box.cls)]
                 conf = float(box.conf)
+                print(f"Detected: {cls} ({conf:.2f})")
+
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+
                 if cls == "cell phone":
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
                     phone_boxes.append((x1, y1, x2, y2, conf))
 
                     show_alert_until = time.time() + 3
@@ -88,11 +101,15 @@ while True:
                         last_alert = time.time()
                         force_replay = False
 
+                elif cls in ("person", "chair"):  # NEW: outline only, no alert logic
+                    other_boxes.append((x1, y1, x2, y2, cls, conf))
+
         if time.time() < show_alert_until:
             cv2.putText(frame, "LARGA O CELULAR!", (30, 240),
                         cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 255), 4, cv2.LINE_AA)
             draw_phone_boxes(frame, phone_boxes)
 
+        draw_other_boxes(frame, other_boxes)  # NEW
         draw_button(frame)
         cv2.imshow("monitor", frame)
         if cv2.waitKey(1) == ord('q'):
